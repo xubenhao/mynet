@@ -1,0 +1,10 @@
+include_directories("${PROJECT_SOURCE_DIR}/include")
+set(EXTRA_LIBS ${EXTRA_LIBS} mynet_dyn)
+add_executable(cli_test cli_test.cpp)
+target_link_libraries(cli_test ${EXTRA_LIBS})
+
+add_executable(srv_test srv_test.cpp)
+target_link_libraries(srv_test ${EXTRA_LIBS})
+#install(TARGETS arrdemo DESTINATION bin)
+#add_test(arr1 arrdemo)
+#set_tests_properties(arr1 PROPERTIES pass_regular_expression "xxx")

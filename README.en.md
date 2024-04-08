@@ -1,110 +1,115 @@
 # mynet
 
-#### 介绍
-个人实现的c++开源网络库．
+#### Introduce
+Personal implementation of C++ open-source network library．
 
-#### 软件架构
-1. 结构图
+#### Software architecture
+1. Structural diagram
 
-![结构图](https://foruda.gitee.com/images/1712475087930791242/9aa99396_13993444.png "屏幕截图")
+![Structural diagram](https://foruda.gitee.com/images/1712475087930791242/9aa99396_13993444.png "屏幕截图")
 
-2. 基于event的自动分发机制
+2. Event based automatic distribution mechanism
 
-![自动分发机制](https://foruda.gitee.com/images/1712475620967974857/7b17fd68_13993444.png "屏幕截图")
+![automatic distribution mechanism](https://foruda.gitee.com/images/1712475620967974857/7b17fd68_13993444.png "屏幕截图")
 
-3. 多优先级分发队列，延迟分发队列
+3. Multi priority distribution queue, delayed distribution queue
 
-![分发队列](https://foruda.gitee.com/images/1712475862800498143/afba04a0_13993444.png "屏幕截图")
+![distribution queue](https://foruda.gitee.com/images/1712475862800498143/afba04a0_13993444.png "屏幕截图")
 
-内部event服务于通知机制的优先级为0，外部event优先级为1．
-当集中处理分发的event_callback时，若激活了更高优先级的event_callback，可在当前event_callback回调处理结束．进入下次时间循环，以便高优先级event_callback及时得到处理．
+The priority of internal events serving notification mechanisms is 0, while the priority of external events is 1.
+When the distributed event_callback is centrally processed, if a higher priority event_callback is activated, 
+the processing can be completed by calling back the current event_callback and entering the next time loop, 
+so that the higher priority event_callback can be processed in a timely manner
 
-4. 主动分发event_callback来向工作线程提交回调任务
+4. Proactively distribute event_callback to submit callback tasks to worker threads
 
-![主动分发event_callback](https://foruda.gitee.com/images/1712476468072085716/f3d4d96a_13993444.png "屏幕截图")
+![Proactively distribute event_callback](https://foruda.gitee.com/images/1712476468072085716/f3d4d96a_13993444.png "屏幕截图")
 
-5. 通信对象的高效缓存区管理
+5. Efficient cache management of communication objects
 
-5.1. 以携带管理信息的可变尺寸块作为基础缓存单位
+5.1. Using variable size blocks carrying management information as the basic caching unit
 
-![可变尺寸块](https://foruda.gitee.com/images/1712476672616771182/7419f63f_13993444.png "屏幕截图")
+![variable size blocks](https://foruda.gitee.com/images/1712476672616771182/7419f63f_13993444.png "屏幕截图")
 
-5.2. 以可变尺寸块的链式队列构成的缓存区
+5.2. A cache area composed of a chain queue of variable size blocks
 
-![缓存区](https://foruda.gitee.com/images/1712476860378125472/7c4e4d48_13993444.png "屏幕截图")
+![cache area](https://foruda.gitee.com/images/1712476860378125472/7c4e4d48_13993444.png "屏幕截图")
 
-5.3. 块的可复用
+5.3. Reusability of blocks
 
-对由于消耗而需释放的块，采用缓存而非释放来管理．
+For blocks that need to be released due to consumption, cache is used instead of release for management.
 
-![块的缓存](https://foruda.gitee.com/images/1712477088131554284/67548ae4_13993444.png "屏幕截图")
+![Cache of blocks](https://foruda.gitee.com/images/1712477088131554284/67548ae4_13993444.png "屏幕截图")
 
-释放块时候，依据块容量，释放到缓存指定容量下块的容器．
-需要新块时，依据所需容量，先从缓存取块，取不到时，再动态分配新的块．
+When releasing a block, based on the block capacity, release it to the container of the block specified in the cache
+When a new block is needed, it is first fetched from the cache based on the required capacity. If it cannot be retrieved, a new block is dynamically allocated.
 
-5.4. 连接对象的连接管理
-采用一个互斥锁，实现连接对象上连接建立过程，连接断开过程至多只有一个并发．
+5.4. Connection management of connection objects
+Using a mutex lock to implement the connection establishment process on the connection object, and the connection disconnection process can only have one concurrency at most.
 
-a. 连接过程
+a. Connection process
 
-![连接过程](https://foruda.gitee.com/images/1712477863238957850/8cd44ca2_13993444.png "屏幕截图")
+![Connection process](https://foruda.gitee.com/images/1712477863238957850/8cd44ca2_13993444.png "屏幕截图")
 
-b. 断开过程
+b. Disconnect process
 
-![断开过程](https://foruda.gitee.com/images/1712478038360039641/41ddd2b0_13993444.png "屏幕截图")
+![Disconnect process](https://foruda.gitee.com/images/1712478038360039641/41ddd2b0_13993444.png "屏幕截图")
 
-c. 断开投递快速响应
+c. Disconnect delivery and respond quickly
 
-设置手动分发event_callback的优先级为0，借助event_callback的多优先级分发队列．可使得当前event_callback回调处理结束，即可开始下轮循环，从而快速处理分发的高优先级的event_callback．
+Set the priority of manually distributing event_callback to 0, and use the multi priority distribution queue of event_callback. 
+This can make the current event_callback callback processing end and start the next cycle, thereby quickly processing high priority event_callback distributions.
 
-5.5. 连接对象高效锁管理
+5.5. Efficient lock management for connecting objects
 
-a. 通过连接锁实现连接建立，连接断开的串行化．
+a. Serialization of connection establishment and disconnection through connection locks
 
-b. 可读事件处理，收包回调无锁处理
+b. Readable event handling, packet receiving callback lockless processing
 
-因为可读事件及收包回调只在单个工作线程引发，且通过连接建立，连接断开的串行化处理．收包过程及其回调可是实现为无锁的．
+Because readable events and packet collection callbacks are only triggered on a single worker thread and are serialized through connection establishment and disconnection. 
+The packet collection process and its callbacks can be implemented as lockless.
 
-c. 通过发送锁实现发送缓存区并发管理
+c. Implementing concurrent management of sending cache area through sending locks
 
-用户线程执行发送，工作线程可写事件执行异步发送分别充当了发送缓存的生产者，消费者．我们用发送互斥锁进行并发管理．
+The user thread performs sending, while the worker thread can write events and perform asynchronous sending, 
+acting as the producers and consumers of the sending cache. We use sending mutexes for concurrency management
 
-5.6. 高效的io复用
+5.6. Efficient IO reuse
 
-a. 采用epoll作为io复用器，其比select，poll在管理大规模事件监控时性能更优异．
+a. Using epoll as the IO multiplexer, it performs better than select and poll in managing large-scale event monitoring．
 
-b. 只在必要时注册连接对象可写event到event_base．
+b. Only register connection objects when necessary to write events to event_base．
 
-b.1. 连接建立过程，我们将其注册到event_base，以便实现连接结果异步处理．
+b.1. The connection establishment process is registered with event_base to achieve asynchronous processing of connection results．
 
-b.2. 用户线程向发送缓存写入新数据时，我们将其注册到event_base以便实现数据在可写事件中的异步发送．
+b.2. When the user thread writes new data to the send cache, we register it with event_base to achieve asynchronous sending of data in writable events．
 
-b.3. 在异步发送里，判断发送缓存为空时，自动移除可写event．以便减少不必要的事件分发．
+b.3. In asynchronous sending, when the sending cache is determined to be empty, automatically remove writable events to reduce unnecessary event distribution．
 
-5.7. 简单易用
+5.7. Simple and easy-to-use
 
-a. 以c++实现．
+a. Implemented in C++.
 
-b. 以工厂模式管理资源．
+b. Manage resources in a factory mode.
 
-c. 接口定义清晰，详见使用说明
+c. The interface definition is clear, please refer to the user manual for details.
 
-#### 系统要求
+#### system requirements 
 
-1. 支持c++11
-2. 支持cmake
-3. linux系统
+1. Supports c++11
+2. Supports CMake
+3. Linux system
 
-#### 安装教程
+#### Installation Tutorial
 
-1. 在mynet/build下执行：cmake ../
-2. 在mynet/build下执行：make
-3. 在mynet/build/demo下执行：./srv_test开启服务端
-4. 在mynet/build/demo下执行：./cli_test开启客户端
+1. Execute cmake in mynet/build/
+2. Execute: make under mynet/build
+3. Execute under mynet/build/demo:/ srv_test enable server
+4. Execute under mynet/build/demo:/ cli_test enable client
 
-#### 使用说明
+#### Instructions for use
 
-1.  客户端demo
+1.  Client demo
 
 ```
 #include "ifactory.h"
@@ -254,7 +259,7 @@ int main(){
 }
 ```
 
-2.  服务端demo
+2.  Server demo
 
 ```
 #include "ifactory.h"
@@ -394,16 +399,16 @@ int main(){
 ```
 
 
-#### 参与贡献
+#### Participate in contributions
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+1.  Fork warehouse
+2.  Create a new Feat_xxx branch
+3.  Submit Code
+4.  Create a new Pull Request
 
 
-#### 后续待处理事项
+#### Subsequent pending matters
 
-1. 完善各类场景单元测试
-2. 支持epoll的et模式事件分发
-3. 制作规范清晰的使用文档
+1. Improve unit testing for various scenarios
+2. Supporting epoll for ET mode event distribution
+3. Create standardized and clear usage documents
